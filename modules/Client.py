@@ -11,11 +11,10 @@ class Client:
         self.train_user_list = train_user_list
         self.sampler_size = sampler_size
 
-    def predict(self, max_k, server_model):
-        result = self.model.predict(server_model)
-        result[list(self.train_user_list)] = -np.inf
-        top_k = result.argsort()[-max_k:][::-1]
-        top_k_score = result[top_k]
+    def predict(self, prediction, max_k):
+        prediction[list(self.train_user_list)] = -np.inf
+        top_k = prediction.argsort()[-max_k:][::-1]
+        top_k_score = prediction[top_k]
         prediction = {top_k[i]: top_k_score[i] for i in range(len(top_k))}
 
         return prediction

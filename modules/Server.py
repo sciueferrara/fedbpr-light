@@ -1,6 +1,7 @@
 import random
 import multiprocessing
 from .Worker import Worker
+import numpy as np
 
 random.seed(43)
 
@@ -51,9 +52,11 @@ class Server:
         self._send_strategy.update_deltas(self.model, item_vecs_bak, item_bias_bak)
 
     def predict(self, clients, max_k):
+        X = np.dot(np.array([c.model.user_vec for c in clients]), self.model.item_vecs.T) + self.model.item_bias
+        print('Matrix computed')
         predictions = []
         for i, c in enumerate(clients):
             #self._send_strategy.send_item_vectors(clients, i, self.model)
-            predictions.append(c.predict(max_k, self.model))
+            predictions.append(c.predict(X[i], max_k))
             #self._send_strategy.delete_item_vectors(clients, i)
         return predictions
