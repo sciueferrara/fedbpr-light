@@ -20,7 +20,7 @@ class Client:
 
         return prediction
 
-    def train(self, lr, positive_fraction):
+    def train(self, lr, positive_fraction, server_model):
 
         def operation(i, j):
             x_i = self.model.predict_one(i)
@@ -31,23 +31,19 @@ class Client:
             wu = self.model.user_vec.copy()
             self.model.user_vec += lr * (d_loss * (self.model.item_vecs[i] - self.model.item_vecs[j]) - user_reg * wu)
 
-            resulting_dic[j] = np.add(resulting_dic[j], d_loss * (-wu) - negative_item_reg * self.model.item_vecs[j])
-            resulting_bias.update({j: resulting_bias[j] - d_loss - bias_reg * self.model.item_bias[j]})
+            server_model.item_vecs[j] = np.add(server_model.item_vecs[j], lr* d_loss * (-wu) - negative_item_reg * server_model.item_vecs[j])
+            server_model.item_bias[j] += - lr * d_loss - bias_reg * server_model.item_bias[j]
 
             if positive_fraction:
                 if random.random() >= 1 - positive_fraction:
-                    resulting_dic[i] = np.add(resulting_dic[i],
-                                              d_loss * wu - positive_item_reg * self.model.item_vecs[i])
-                    resulting_bias.update({i: resulting_bias[i] + d_loss - bias_reg * self.model.item_bias[i]})
+                    server_model.item_vecs[i] = np.add(server_model.item_vecs[i],
+                                                       lr * d_loss * (-wu) - positive_item_reg * server_model.item_vecs[i])
+                    server_model.item_bias[i] += lr * d_loss - bias_reg * server_model.item_bias[j]
 
         bias_reg = 0
         user_reg = lr / 20
         positive_item_reg = lr / 20
         negative_item_reg = lr / 200
-        resulting_dic = defaultdict(lambda: np.zeros(len(self.model.user_vec)))
-        resulting_bias = defaultdict(float)
 
         sample = self.train_set.sample_user_triples()
         deque(starmap(lambda i, j: operation(i, j), sample), maxlen=0)
-
-        return resulting_dic, resulting_bias

@@ -22,17 +22,17 @@ class Server:
         return idx
 
     def train_on_client(self, clients, i):
-        resulting_dic, resulting_bias = clients[i].train(self.lr, self.positive_fraction)
-        for k, v in resulting_dic.items():
-            self.model.item_vecs[k] += self.lr * v
-        for k, v in resulting_bias.items():
-            self.model.item_bias[k] += self.lr * v
+        clients[i].train(self.lr, self.positive_fraction, self.model)
+        # for k, v in resulting_dic.items():
+        #     self.model.item_vecs[k] += self.lr * v
+        # for k, v in resulting_bias.items():
+        #     self.model.item_bias[k] += self.lr * v
 
     def train_model(self, clients):
         item_vecs_bak, item_bias_bak = self._send_strategy.backup_item_vectors(self.model) or (None, None)
         c_list = self.select_clients(clients, self.fraction)
-        for i in c_list:
-            self._send_strategy.send_item_vectors(clients, i, self.model)
+        #for i in c_list:
+        #    self._send_strategy.send_item_vectors(clients, i, self.model)
         if not self.mp:
             for i in c_list:
                 self.train_on_client(clients, i)
@@ -48,8 +48,6 @@ class Server:
             for i in range(num_workers):
                 tasks.put(None)
             tasks.join()
-        for i in c_list:
-            self._send_strategy.delete_item_vectors(clients, i)
         self._send_strategy.update_deltas(self.model, item_vecs_bak, item_bias_bak)
 
     def predict(self, clients, max_k):
