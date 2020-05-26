@@ -11,8 +11,8 @@ class Client:
         self.train_user_list = train_user_list
         self.sampler_size = sampler_size
 
-    def predict(self, max_k):
-        result = self.model.predict()
+    def predict(self, max_k, server_model):
+        result = self.model.predict(server_model)
         result[list(self.train_user_list)] = -np.inf
         top_k = result.argsort()[-max_k:][::-1]
         top_k_score = result[top_k]
@@ -23,8 +23,8 @@ class Client:
     def train(self, lr, positive_fraction, server_model):
 
         def operation(i, j):
-            x_i = self.model.predict_one(i)
-            x_j = self.model.predict_one(j)
+            x_i = self.model.predict_one(i, server_model)
+            x_j = self.model.predict_one(j, server_model)
             x_ij = x_i - x_j
             d_loss = 1 / (1 + np.exp(x_ij))
 

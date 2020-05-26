@@ -53,7 +53,7 @@ class Server:
     def predict(self, clients, max_k):
         predictions = []
         for i, c in enumerate(clients):
-            self._send_strategy.send_item_vectors(clients, i, self.model)
+            #self._send_strategy.send_item_vectors(clients, i, self.model)
             predictions.append(c.predict(max_k))
-            self._send_strategy.delete_item_vectors(clients, i)
+            #self._send_strategy.delete_item_vectors(clients, i)
         return predictions
