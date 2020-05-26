@@ -29,7 +29,7 @@ class Client:
             d_loss = 1 / (1 + np.exp(x_ij))
 
             wu = self.model.user_vec.copy()
-            self.model.user_vec += lr * (d_loss * (self.model.item_vecs[i] - self.model.item_vecs[j]) - user_reg * wu)
+            self.model.user_vec += lr * (d_loss * (server_model.item_vecs[i] - server_model.item_vecs[j]) - user_reg * wu)
 
             server_model.item_vecs[j] = np.add(server_model.item_vecs[j], lr* d_loss * (-wu) - negative_item_reg * server_model.item_vecs[j])
             server_model.item_bias[j] += - lr * d_loss - bias_reg * server_model.item_bias[j]
