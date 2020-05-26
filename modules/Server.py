@@ -2,6 +2,7 @@ import random
 import multiprocessing
 from .Worker import Worker
 import numpy as np
+from scipy.sparse import csr_matrix, lil_matrix
 
 random.seed(43)
 
@@ -52,7 +53,12 @@ class Server:
         self._send_strategy.update_deltas(self.model, item_vecs_bak, item_bias_bak)
 
     def predict(self, clients, max_k):
-        X = np.dot(np.array([c.model.user_vec for c in clients]), self.model.item_vecs.T) + self.model.item_bias
+        iv_sparse = csr_matrix(self.model.item_vecs)
+        ib_sparse = csr_matrix(self.model.item_bias)
+        uv_sparse = lil_matrix((len(clients), self.model.item_vecs.shape[1]))
+        for i, c in enumerate(clients):
+            uv_sparse[i] = c.model.user_vec
+        X = uv_sparse.dot(iv_sparse.T) + ib_sparse
         print('Matrix computed')
         predictions = []
         for i, c in enumerate(clients):
