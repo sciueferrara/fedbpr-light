@@ -15,7 +15,9 @@ class Client:
     def predict(self, server_model, max_k):
         result = self.model.predict(server_model)
         result[list(self.train_user_list)] = -np.inf
-        top_k = result.argsort()[-max_k:][::-1]
+        # the very fast top_k :-)
+        unordered_top_k = np.argpartition(result, -max_k)[-max_k:]
+        top_k = unordered_top_k[np.argsort(result[unordered_top_k])][::-1]
         top_k_score = result[top_k]
         prediction = {top_k[i]: top_k_score[i] for i in range(len(top_k))}
 
