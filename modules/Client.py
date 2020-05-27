@@ -18,14 +18,16 @@ class Client:
         b = time.time()
         result[list(self.train_user_list)] = -np.inf
         c = time.time()
-        top_k = result.argsort()[-max_k:][::-1]
+        np.sort()
+        top_k = sorted(zip(result, range(len(result))), reverse=True)[:max_k]
+        #top_k = result.argsort()[-max_k:][::-1]
         d = time.time()
-        top_k_score = result[top_k]
-        prediction = {top_k[i]: top_k_score[i] for i in range(len(top_k))}
-        e = time.time()
-        print(b-a,c-b,d-c,e-d)
+        #top_k_score = result[top_k]
+        #prediction = {top_k[i]: top_k_score[i] for i in range(len(top_k))}
+        #e = time.time()
+        print(b-a,c-b,d-c)
 
-        return prediction
+        return top_k
 
     def train(self, lr, positive_fraction, server_model):
 

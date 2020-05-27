@@ -75,7 +75,7 @@ def main(args):
                         results = server.predict(clients, max_k=100)
                         with open('results/{}/recs/{}{}.tsv'.format(dataset, exp_type, exp_setting_3), 'w') as out:
                             for u in range(len(results)):
-                                for e, p in results[u].items():
+                                for p, e in results[u]:
                                     out.write(str(u) + '\t' + str(reverse_dict[e]) + '\t' + str(p) + '\n')
 
 
