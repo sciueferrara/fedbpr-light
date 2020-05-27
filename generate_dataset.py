@@ -27,9 +27,9 @@ def main(args):
                              dtype={'rating': 'float64', 'utc': 'int64'}, header=0, names=names)
         df = df.groupby(['user_id', 'item_id'])['utc'].max().reset_index()
         df['rating'] = 1
-        df = df.groupby('user_id').filter(lambda x: len(x) >= args.user_cut)
         if args.item_cut:
             df = df.groupby('item_id').filter(lambda x: len(x) >= args.item_cut)
+        df = df.groupby('user_id').filter(lambda x: len(x) >= args.user_cut)
         df = df[['user_id', 'item_id', 'rating', 'utc']]
         print(df.shape[0], 'interactions read')
         df, _ = utils.convert_unique_idx(df, 'user_id')
