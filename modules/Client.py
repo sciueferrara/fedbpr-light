@@ -18,7 +18,6 @@ class Client:
         b = time.time()
         result[list(self.train_user_list)] = -np.inf
         c = time.time()
-        np.sort()
         top_k = sorted(zip(result, range(len(result))), reverse=True)[:max_k]
         #top_k = result.argsort()[-max_k:][::-1]
         d = time.time()
