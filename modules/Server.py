@@ -1,9 +1,6 @@
 import random
 import multiprocessing
 from .Worker import Worker
-import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix
-
 random.seed(43)
 
 
