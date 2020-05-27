@@ -2,13 +2,14 @@ import random
 import multiprocessing
 from .Worker import Worker
 random.seed(43)
-
+import copy
 
 class Server:
     def __init__(self, model, lr, fraction, positive_fraction, mp, send_strategy):
         self.mp = mp
         self._send_strategy = send_strategy
         self.model = model
+        self.bak_model = None
         self.lr = lr
         self.fraction = fraction
         self.positive_fraction = positive_fraction
@@ -33,8 +34,14 @@ class Server:
         #for i in c_list:
         #    self._send_strategy.send_item_vectors(clients, i, self.model)
         if not self.mp:
-            for i in c_list:
-                self.train_on_client(clients, i)
+            if len(c_list > 1):
+                self.bak_model = copy.deepcopy(self.model)
+                for i in c_list:
+                    clients[i].train_parallel(self.lr, self.positive_fraction, self.bak_model, self.model)
+                self.bak_model = None
+            else:
+                for i in c_list:
+                    self.train_on_client(clients, i)
         else:
             #TODO: Multiprocessing is not working properly
             tasks = multiprocessing.JoinableQueue()

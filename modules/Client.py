@@ -48,3 +48,32 @@ class Client:
 
         sample = self.train_set.sample_user_triples()
         deque(starmap(lambda i, j: operation(i, j), sample), maxlen=0)
+
+
+    def train_parallel(self, lr, positive_fraction, starting_model, target_model):
+
+        def operation(i, j):
+            x_i = self.model.predict_one(i, starting_model)
+            x_j = self.model.predict_one(j, starting_model)
+            x_ij = x_i - x_j
+            d_loss = 1 / (1 + np.exp(x_ij))
+
+            wu = self.model.user_vec.copy()
+            self.model.user_vec += lr * (d_loss * (starting_model.item_vecs[i] - starting_model.item_vecs[j]) - user_reg * wu)
+
+            target_model.item_vecs[j] = np.add(target_model.item_vecs[j], lr * (d_loss * (-wu) - negative_item_reg * starting_model.item_vecs[j]))
+            target_model.item_bias[j] += - lr * (d_loss - bias_reg * starting_model.item_bias[j])
+
+            if positive_fraction:
+                if random.random() >= 1 - positive_fraction:
+                    target_model.item_vecs[i] = np.add(target_model.item_vecs[i],
+                                                       lr * (d_loss * wu - positive_item_reg * starting_model.item_vecs[i]))
+                    target_model.item_bias[i] += lr * (d_loss - bias_reg * starting_model.item_bias[j])
+
+        bias_reg = 0
+        user_reg = lr / 20
+        positive_item_reg = lr / 20
+        negative_item_reg = lr / 200
+
+        sample = self.train_set.sample_user_triples()
+        deque(starmap(lambda i, j: operation(i, j), sample), maxlen=0)
