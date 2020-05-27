@@ -39,14 +39,14 @@ class Client:
             wu = self.model.user_vec.copy()
             self.model.user_vec += lr * (d_loss * (server_model.item_vecs[i] - server_model.item_vecs[j]) - user_reg * wu)
 
-            server_model.item_vecs[j] = np.add(server_model.item_vecs[j], lr* d_loss * (-wu) - negative_item_reg * server_model.item_vecs[j])
-            server_model.item_bias[j] += - lr * d_loss - bias_reg * server_model.item_bias[j]
+            server_model.item_vecs[j] = np.add(server_model.item_vecs[j], lr * (d_loss * (-wu) - negative_item_reg * server_model.item_vecs[j]))
+            server_model.item_bias[j] += - lr * (d_loss - bias_reg * server_model.item_bias[j])
 
             if positive_fraction:
                 if random.random() >= 1 - positive_fraction:
                     server_model.item_vecs[i] = np.add(server_model.item_vecs[i],
-                                                       lr * d_loss * (-wu) - positive_item_reg * server_model.item_vecs[i])
-                    server_model.item_bias[i] += lr * d_loss - bias_reg * server_model.item_bias[j]
+                                                       lr * (d_loss * (-wu) - positive_item_reg * server_model.item_vecs[i]))
+                    server_model.item_bias[i] += lr * (d_loss - bias_reg * server_model.item_bias[j])
 
         bias_reg = 0
         user_reg = lr / 20

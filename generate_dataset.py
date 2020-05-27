@@ -27,7 +27,9 @@ def main(args):
                              dtype={'rating': 'float64', 'utc': 'int64'}, header=0, names=names)
         df = df.groupby(['user_id', 'item_id'])['utc'].max().reset_index()
         df['rating'] = 1
-        df = df.groupby('user_id').filter(lambda x: len(x) >= 20)
+        df = df.groupby('user_id').filter(lambda x: len(x) >= args.user_cut)
+        if args.item_cut:
+            df = df.groupby('item_id').filter(lambda x: len(x) >= args.item_cut)
         df = df[['user_id', 'item_id', 'rating', 'utc']]
         print(df.shape[0], 'interactions read')
         df, _ = utils.convert_unique_idx(df, 'user_id')
@@ -55,5 +57,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--datasets', nargs='+', help='Set the datasets you want to use', required=True)
     parser.add_argument('--parse_dates', action='store_true', help='Set if UTC contains dates')
+    parser.add_argument('--user_cut', type='int', default=20)
+    parser.add_argument('--item_cut', type='int')
     parsed_args = parser.parse_args()
     main(parsed_args)
