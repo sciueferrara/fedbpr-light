@@ -34,7 +34,7 @@ class Server:
         #for i in c_list:
         #    self._send_strategy.send_item_vectors(clients, i, self.model)
         if not self.mp:
-            if len(c_list > 1):
+            if len(c_list) > 1:
                 self.bak_model = copy.deepcopy(self.model)
                 for i in c_list:
                     clients[i].train_parallel(self.lr, self.positive_fraction, self.bak_model, self.model)
