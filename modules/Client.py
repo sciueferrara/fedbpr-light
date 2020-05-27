@@ -23,7 +23,7 @@ class Client:
         top_k_score = result[top_k]
         prediction = {top_k[i]: top_k_score[i] for i in range(len(top_k))}
         e = time.time()
-        print(a,b,c,d,e)
+        print(b-a,c-b,d-c,e-d)
 
         return prediction
 
