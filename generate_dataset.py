@@ -33,7 +33,7 @@ def main(args):
         df = df[['user_id', 'item_id', 'rating', 'utc']]
         print(df.shape[0], 'interactions read')
         df, _ = utils.convert_unique_idx(df, 'user_id')
-        df, _ = utils.convert_unique_idx(df, 'item_id')
+        df, reverse_items = utils.convert_unique_idx(df, 'item_id')
         user_size = len(df['user_id'].unique())
         item_size = len(df['item_id'].unique())
         print('Found {} users and {} items'.format(user_size, item_size))
@@ -51,6 +51,9 @@ def main(args):
             for u, test_list in enumerate(test_user_lists):
                 for i in test_list:
                     out.write(str(u) + '\t' + str(i) + '\t' + str(1) + '\n')
+        with open('datasets/{}_reverse.tsv'.format(dataset), 'w') as out:
+            for i, x in reverse_items.items():
+                out.write(str(i) + '\t' + str(x) + '\n')
 
 
 if __name__ == '__main__':
