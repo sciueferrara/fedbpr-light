@@ -1,8 +1,8 @@
 import numpy as np
 import random
-from collections import defaultdict, deque
+from collections import deque
 from itertools import starmap
-import time
+
 
 class Client:
     def __init__(self, client_id, model, train, train_user_list, sampler_size):
@@ -13,20 +13,13 @@ class Client:
         self.sampler_size = sampler_size
 
     def predict(self, server_model, max_k):
-        a = time.time()
         result = self.model.predict(server_model)
-        b = time.time()
         result[list(self.train_user_list)] = -np.inf
-        c = time.time()
-        top_k = sorted(zip(result, range(len(result))), reverse=True)[:max_k]
-        #top_k = result.argsort()[-max_k:][::-1]
-        d = time.time()
-        #top_k_score = result[top_k]
-        #prediction = {top_k[i]: top_k_score[i] for i in range(len(top_k))}
-        #e = time.time()
-        print(b-a,c-b,d-c)
+        top_k = result.argsort()[-max_k:][::-1]
+        top_k_score = result[top_k]
+        prediction = {top_k[i]: top_k_score[i] for i in range(len(top_k))}
 
-        return top_k
+        return prediction
 
     def train(self, lr, positive_fraction, server_model):
 
