@@ -53,15 +53,9 @@ class Server:
         self._send_strategy.update_deltas(self.model, item_vecs_bak, item_bias_bak)
 
     def predict(self, clients, max_k):
-        iv_sparse = csr_matrix(self.model.item_vecs)
-        uv_sparse = lil_matrix((len(clients), self.model.item_vecs.shape[1]))
-        for i, c in enumerate(clients):
-            uv_sparse[i] = c.model.user_vec
-        X = uv_sparse.dot(iv_sparse.T).toarray() + self.model.item_bias
-        print('Matrix computed')
         predictions = []
         for i, c in enumerate(clients):
             #self._send_strategy.send_item_vectors(clients, i, self.model)
-            predictions.append(c.predict(X[i], max_k))
+            predictions.append(c.predict(self.model, max_k))
             #self._send_strategy.delete_item_vectors(clients, i)
         return predictions
