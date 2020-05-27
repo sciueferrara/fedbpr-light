@@ -51,6 +51,7 @@ def split_train_test(user_list, test_size=0.2, validation_size=0) -> Tuple[list,
     validation_user_list = [None] * len(user_list)
     test_user_list = [None] * len(user_list)
     for user, item_dict in enumerate(user_list):
+        print(user, len(item_dict))
         item = sorted(item_dict.items(), key=lambda x: x[1], reverse=True)
 
         latest_item = item[:int(len(item)*test_size)]
