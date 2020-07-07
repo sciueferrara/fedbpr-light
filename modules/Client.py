@@ -8,7 +8,7 @@ class Client:
     def __init__(self, client_id, model, train, train_user_list, sampler_size):
         self.id = client_id
         self.model = model
-        self.train_set = train
+        #self.train_set = train
         self.train_user_list = train_user_list
         self.sampler_size = sampler_size
 
@@ -25,9 +25,18 @@ class Client:
 
     def train(self, lr, positive_fraction, server_model):
 
-        def operation(i, j):
-            x_i = self.model.predict_one(i, server_model)
-            x_j = self.model.predict_one(j, server_model)
+        def sample_user_triples(training_list):
+            training_set = set(training_list)
+            for _ in range(len(training_set)):
+                i = random.choice(training_list)
+                j = random.randrange(self.item_size)
+                while j in training_set:
+                    j = random.randrange(self.item_size)
+                yield i, j
+
+        def compute_gradient(i, j):
+            x_i = np.dot(server_model.item_vecs[i], self.model.user_vec) + server_model.item_bias[i]
+            x_j = np.dot(server_model.item_vecs[j], self.model.user_vec) + server_model.item_bias[j]
             x_ij = x_i - x_j
             d_loss = 1 / (1 + np.exp(x_ij))
 
@@ -48,8 +57,9 @@ class Client:
         positive_item_reg = lr / 20
         negative_item_reg = lr / 200
 
-        sample = self.train_set.sample_user_triples()
-        deque(starmap(lambda i, j: operation(i, j), sample), maxlen=0)
+        sample = sample_user_triples(self.train_user_list)
+        #sample = self.train_set.sample_user_triples()
+        deque(starmap(lambda i, j: compute_gradient(i, j), sample), maxlen=0)
 
 
     def train_parallel(self, lr, positive_fraction, starting_model, target_model):
