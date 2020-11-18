@@ -5,12 +5,13 @@ from itertools import starmap
 
 
 class Client:
-    def __init__(self, client_id, model, train, train_user_list, sampler_size):
+    def __init__(self, client_id, model, train, train_user_list, sampler_size, item_size):
         self.id = client_id
         self.model = model
         #self.train_set = train
         self.train_user_list = train_user_list
         self.sampler_size = sampler_size
+        self.item_size = item_size
 
     def predict(self, server_model, max_k):
         result = self.model.predict(server_model)
