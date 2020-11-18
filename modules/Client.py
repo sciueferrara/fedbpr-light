@@ -96,5 +96,5 @@ class Client:
         positive_item_reg = lr / 20
         negative_item_reg = lr / 200
 
-        sample = sample_user_triples(self.train_user_list)
+        sample = sample_user_triples(self.train_user_list.keys())
         deque(starmap(lambda i, j: operation(i, j), sample), maxlen=0)
