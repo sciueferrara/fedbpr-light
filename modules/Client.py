@@ -64,6 +64,15 @@ class Client:
 
     def train_parallel(self, lr, positive_fraction, starting_model, target_model):
 
+        def sample_user_triples(training_list):
+            training_set = set(training_list)
+            for _ in range(len(training_set)):
+                i = random.choice(training_list)
+                j = random.randrange(self.item_size)
+                while j in training_set:
+                    j = random.randrange(self.item_size)
+                yield i, j
+        
         def operation(i, j):
             x_i = self.model.predict_one(i, starting_model)
             x_j = self.model.predict_one(j, starting_model)
@@ -87,5 +96,5 @@ class Client:
         positive_item_reg = lr / 20
         negative_item_reg = lr / 200
 
-        sample = self.train_set.sample_user_triples()
+        sample = sample_user_triples(self.train_user_list)
         deque(starmap(lambda i, j: operation(i, j), sample), maxlen=0)
