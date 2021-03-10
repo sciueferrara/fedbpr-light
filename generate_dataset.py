@@ -17,27 +17,27 @@ def main(args):
         print("Working on", dataset, "dataset")
 
         # Read the dataset and prepare it for training, validation and test
-        names = ['user_id', 'item_id', 'rating', 'utc']
+        names = ['user_id', 'item_id', 'rating']
         if args.parse_dates:
             parse_dates = ['utc']
             df = pd.read_csv('raw_datasets/' + dataset + '.tsv', sep='\t',
-                             dtype={'rating': 'float64', 'utc': 'str'}, parse_dates=parse_dates, header=0, names=names)
+                             dtype={'rating': 'float64'}, parse_dates=parse_dates, header=0, names=names)
         else:
             df = pd.read_csv('raw_datasets/' + dataset + '.tsv', sep='\t',
-                             dtype={'rating': 'float64', 'utc': 'int64'}, header=0, names=names)
-        df = df.groupby(['user_id', 'item_id'])['utc'].max().reset_index()
+                             dtype={'rating': 'float64'}, header=0, names=names)
+        # df = df.groupby(['user_id', 'item_id'])['utc'].max().reset_index()
         df['rating'] = 1
         if args.item_cut:
             df = df.groupby('item_id').filter(lambda x: len(x) >= args.item_cut)
         df = df.groupby('user_id').filter(lambda x: len(x) >= args.user_cut)
-        df = df[['user_id', 'item_id', 'rating', 'utc']]
+        df = df[['user_id', 'item_id', 'rating']]
         print(df.shape[0], 'interactions read')
         df, _ = utils.convert_unique_idx(df, 'user_id')
         df, reverse_items = utils.convert_unique_idx(df, 'item_id')
         user_size = len(df['user_id'].unique())
         item_size = len(df['item_id'].unique())
         print('Found {} users and {} items'.format(user_size, item_size))
-        total_user_lists = utils.create_user_lists(df, user_size, 4)
+        total_user_lists = utils.create_user_lists(df, user_size, 3)
         train_user_lists, validation_user_lists, test_user_lists = utils.split_train_test(total_user_lists,
                                                                                           test_size=0.2)
 

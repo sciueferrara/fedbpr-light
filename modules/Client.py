@@ -1,17 +1,24 @@
 import numpy as np
-import random
-from collections import deque
-from itertools import starmap
 
 
 class Client:
-    def __init__(self, client_id, model, train, train_user_list, sampler_size, item_size):
+    def __init__(self, client_id, model, privacy_params, train_user_list, sampler_size, item_size):
         self.id = client_id
         self.model = model
-        #self.train_set = train
         self.train_user_list = train_user_list
         self.sampler_size = sampler_size
         self.item_size = item_size
+
+        self.pi = privacy_params[0]
+        self.q = privacy_params[1]
+        self.p = privacy_params[2]
+
+        # The first perturbation is here!
+        self.c = - np.ones(self.item_size)
+        self.c[list(self.train_user_list)] = 1
+        self.pert = np.random.random(self.item_size)
+        self.c = np.ma.masked_where(self.pert < self.pi, self.c).filled(-1)
+        self.c = np.ma.masked_where(self.pert < 0.5 * self.pi, self.c).filled(1)
 
     def predict(self, server_model, max_k):
         result = self.model.predict(server_model)
@@ -24,78 +31,41 @@ class Client:
 
         return prediction
 
-    def train(self, lr, positive_fraction, server_model):
-
-        def sample_user_triples(training_list):
-            training_set = set(training_list)
-            for _ in range(len(training_set)):
-                i = random.choice(training_list)
-                j = random.randrange(self.item_size)
-                while j in training_set:
-                    j = random.randrange(self.item_size)
-                yield i, j
-
-        def compute_gradient(i, j):
-            x_i = np.dot(server_model.item_vecs[i], self.model.user_vec) + server_model.item_bias[i]
-            x_j = np.dot(server_model.item_vecs[j], self.model.user_vec) + server_model.item_bias[j]
-            x_ij = x_i - x_j
-            d_loss = 1 / (1 + np.exp(x_ij))
-
-            wu = self.model.user_vec.copy()
-            self.model.user_vec += lr * (d_loss * (server_model.item_vecs[i] - server_model.item_vecs[j]) - user_reg * wu)
-
-            server_model.item_vecs[j] = np.add(server_model.item_vecs[j], lr * (d_loss * (-wu) - negative_item_reg * server_model.item_vecs[j]))
-            server_model.item_bias[j] += - lr * (d_loss - bias_reg * server_model.item_bias[j])
-
-            if positive_fraction:
-                if random.random() >= 1 - positive_fraction:
-                    server_model.item_vecs[i] = np.add(server_model.item_vecs[i],
-                                                       lr * (d_loss * wu - positive_item_reg * server_model.item_vecs[i]))
-                    server_model.item_bias[i] += lr * (d_loss - bias_reg * server_model.item_bias[j])
-
+    def train(self, lr, server_model):
         bias_reg = 0
         user_reg = lr / 20
         positive_item_reg = lr / 20
         negative_item_reg = lr / 200
 
-        sample = sample_user_triples(self.train_user_list)
-        #sample = self.train_set.sample_user_triples()
-        deque(starmap(lambda i, j: compute_gradient(i, j), sample), maxlen=0)
+        new_perturbed = - np.ones(self.item_size)
+        new_perturbation = np.random.random(self.item_size)
+        new_perturbed[new_perturbation < 0.5 * ((self.c + 1) * self.q - (self.c - 1) * self.p)] = 1
 
+        pert_pos = np.argwhere(new_perturbed == 1).flatten()
+        pert_neg = np.argwhere(new_perturbed == -1).flatten()
 
-    def train_parallel(self, lr, positive_fraction, starting_model, target_model):
+        positive_sampled = np.random.choice(pert_pos, len(self.train_user_list))
+        negative_sampled = np.random.choice(pert_neg, len(self.train_user_list))
 
-        def sample_user_triples(training_list):
-            training_set = set(training_list)
-            for _ in range(len(training_set)):
-                i = random.choice(training_list)
-                j = random.randrange(self.item_size)
-                while j in training_set:
-                    j = random.randrange(self.item_size)
-                yield i, j
-        
-        def operation(i, j):
-            x_i = self.model.predict_one(i, starting_model)
-            x_j = self.model.predict_one(j, starting_model)
-            x_ij = x_i - x_j
-            d_loss = 1 / (1 + np.exp(x_ij))
+        x_p = np.dot(server_model.item_vecs[positive_sampled], self.model.user_vec) +\
+              server_model.item_bias[positive_sampled]
 
-            wu = self.model.user_vec.copy()
-            self.model.user_vec += lr * (d_loss * (starting_model.item_vecs[i] - starting_model.item_vecs[j]) - user_reg * wu)
+        x_n = np.dot(server_model.item_vecs[negative_sampled], self.model.user_vec) +\
+              server_model.item_bias[negative_sampled]
 
-            target_model.item_vecs[j] = np.add(target_model.item_vecs[j], lr * (d_loss * (-wu) - negative_item_reg * starting_model.item_vecs[j]))
-            target_model.item_bias[j] += - lr * (d_loss - bias_reg * starting_model.item_bias[j])
+        x_pn = x_p - x_n
+        d_loss = (1 / (1 + np.exp(x_pn))).reshape((-1, 1))
 
-            if positive_fraction:
-                if random.random() >= 1 - positive_fraction:
-                    target_model.item_vecs[i] = np.add(target_model.item_vecs[i],
-                                                       lr * (d_loss * wu - positive_item_reg * starting_model.item_vecs[i]))
-                    target_model.item_bias[i] += lr * (d_loss - bias_reg * starting_model.item_bias[j])
+        wu = self.model.user_vec.copy()
+        self.model.user_vec += lr * np.sum(
+                d_loss * (server_model.item_vecs[positive_sampled] - server_model.item_vecs[negative_sampled]) - user_reg * wu,
+        axis=0)
 
-        bias_reg = 0
-        user_reg = lr / 20
-        positive_item_reg = lr / 20
-        negative_item_reg = lr / 200
+        server_model.item_vecs[positive_sampled] = np.add(server_model.item_vecs[positive_sampled],
+                                           lr * (d_loss * wu - positive_item_reg * server_model.item_vecs[
+                                               positive_sampled]))
+        server_model.item_bias[positive_sampled] += lr * (d_loss.reshape(-1) - bias_reg * server_model.item_bias[positive_sampled])
 
-        sample = sample_user_triples(list(self.train_user_list.keys()))
-        deque(starmap(lambda i, j: operation(i, j), sample), maxlen=0)
+        server_model.item_vecs[negative_sampled] = np.add(server_model.item_vecs[negative_sampled],
+                                           lr * (d_loss * (-wu) - negative_item_reg * server_model.item_vecs[negative_sampled]))
+        server_model.item_bias[negative_sampled] += - lr * (d_loss.reshape(-1) - bias_reg * server_model.item_bias[negative_sampled])

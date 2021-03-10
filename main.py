@@ -18,7 +18,7 @@ def main(args):
     if not os.path.exists('results'):
         os.makedirs('results')
 
-    exp_type = utils.create_file_prefix(args.positive_fraction, args.with_delta, args.fraction, args.sampler_size)
+    #exp_type = utils.create_file_prefix(args.positive_fraction, args.with_delta, args.fraction, args.sampler_size)
 
     #processing_strategy = ProcessingStrategy.MultiProcessing() if args.mp else ProcessingStrategy.SingleProcessing()
     send_strategy = SendStrategy.SendDelta() if args.with_delta else SendStrategy.SendVector()
@@ -40,7 +40,7 @@ def main(args):
 
         # Set parameters based on arguments
         if args.fraction == 0:
-            round_modifier = int(train_interactions_size)
+            round_modifier = int(train_interactions_size / user_size)
         else:
             round_modifier = int(train_interactions_size / (args.fraction * user_size))
 
@@ -58,32 +58,41 @@ def main(args):
 
                 # Create server and clients
                 server_model = ServerModel(item_size, n_factors)
-                server = Server(server_model, lr, args.fraction, args.positive_fraction, args.mp, send_strategy)
-                clients = [Client(u, ClientModel(n_factors), triplet_samplers[u], train_user_lists[u],
-                                  sampler_size, item_size) for u in range(user_size)]
+                server = Server(server_model, lr, args.fraction, args.mp, send_strategy)
 
-                # Start training
-                for i in range(args.n_epochs * round_modifier):
-                    if i % round_modifier == 0:
-                        bar = IncrementalBar('Epoch ' + str(int(i / round_modifier + 1)), max=round_modifier)
-                    bar.next()
-                    server.train_model(clients)
+                for pi in args.main_probability:
+                    for q in args.q:
+                        for p in args.p:
+                            exp_setting_3 = exp_setting_2 + "_pi" + str(pi) + "_q" + str(q) + "_p" + str(p)
 
-                    # Evaluation
-                    if ((i + 1) % (args.eval_every * round_modifier)) == 0:
-                        exp_setting_3 = exp_setting_2 + "_I" + str((i + 1) / round_modifier)
-                        results = server.predict(clients, max_k=100)
-                        with open('results/{}/recs/{}{}.tsv'.format(dataset, exp_type, exp_setting_3), 'w') as out:
-                            for u in range(len(results)):
-                                for e, p in results[u].items():
-                                    out.write(str(u) + '\t' + str(reverse_dict[e]) + '\t' + str(p) + '\n')
+                            clients = [Client(u, ClientModel(n_factors), (pi, q, p), train_user_lists[u],
+                                              sampler_size, item_size) for u in range(user_size)]
+
+                            # Start training
+
+                            for i in range(args.n_epochs * round_modifier):
+                                if i % round_modifier == 0:
+                                    bar = IncrementalBar('Epoch ' + str(int(i / round_modifier + 1)), max=round_modifier)
+                                bar.next()
+                                server.train_model(clients)
+
+                                # Evaluation
+                                if ((i + 1) % (args.eval_every * round_modifier)) == 0:
+                                    exp_setting_4 = exp_setting_3 + "_I" + str((i + 1) / round_modifier)
+                                    results = server.predict(clients, max_k=100)
+                                    with open('results/{}/recs/{}.tsv'.format(dataset, exp_setting_4), 'w') as out:
+                                        for u in range(len(results)):
+                                            for e, t in results[u].items():
+                                                out.write(str(u) + '\t' + str(reverse_dict[e]) + '\t' + str(t) + '\n')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--datasets', nargs='+', help='Set the datasets you want to use', required=True)
     parser.add_argument('-F', '--n_factors', nargs='+', help='Set the latent factors you want', type=int, required=True)
-    parser.add_argument('-pi', '--positive_fraction', type=float, help='Set the fraction of positive item to send (default 0)')
+    parser.add_argument('-pi', '--main_probability', nargs='+', type=float, help='Set the fraction of positive item to send (default 0)')
+    parser.add_argument('-q', '--q', nargs='+', help='Set the fraction of positive item to send (default 0)', type=float)
+    parser.add_argument('-p', '--p', nargs='+', help='Set the fraction of positive item to send (default 0)', type=float)
     parser.add_argument('-U', '--fraction', help='Set the fraction of clients per round (0 for just one client)', type=float, default=0, required=True)
     parser.add_argument('-T', '--sampler_size', help='Set the sampler size: single for 1, uniform for R/U')
     parser.add_argument('-lr', '--lr', nargs='+', help='Set the learning rates', type=float, required=True)
