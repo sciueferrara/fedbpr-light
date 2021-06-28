@@ -20,6 +20,8 @@ def main(args):
 
     #exp_type = utils.create_file_prefix(args.positive_fraction, args.with_delta, args.fraction, args.sampler_size)
 
+    string = 'FedBPRPrivate-Frac' + str(args.fraction) + '-Samp' + args.sampler_size
+
     #processing_strategy = ProcessingStrategy.MultiProcessing() if args.mp else ProcessingStrategy.SingleProcessing()
     send_strategy = SendStrategy.SendDelta() if args.with_delta else SendStrategy.SendVector()
 
@@ -81,7 +83,7 @@ def main(args):
                                     if ((i + 1) % (args.eval_every * round_modifier)) == 0:
                                         exp_setting_4 = exp_setting_3 + "_I" + str((i + 1) / round_modifier)
                                         results = server.predict(clients, max_k=100)
-                                        with open('results/{}/recs/{}.tsv'.format(dataset, exp_setting_4), 'w') as out:
+                                        with open('results/{}/recs/{}.tsv'.format(dataset, string+exp_setting_4), 'w') as out:
                                             for u in range(len(results)):
                                                 for e, t in results[u].items():
                                                     out.write(str(u) + '\t' + str(reverse_dict[e]) + '\t' + str(t) + '\n')
