@@ -63,27 +63,28 @@ def main(args):
                 for pi in args.main_probability:
                     for q in args.q:
                         for p in args.p:
-                            exp_setting_3 = exp_setting_2 + "_pi" + str(pi) + "_q" + str(q) + "_p" + str(p)
+                            for h in args.imax:
+                                exp_setting_3 = exp_setting_2 + "_pi" + str(pi) + "_q" + str(q) + "_p" + str(p) + "_h" + str(h)
 
-                            clients = [Client(u, ClientModel(n_factors), (pi, q, p), train_user_lists[u],
-                                              sampler_size, item_size) for u in range(user_size)]
+                                clients = [Client(u, ClientModel(n_factors), (pi, q, p, h), train_user_lists[u],
+                                                  sampler_size, item_size) for u in range(user_size)]
 
-                            # Start training
+                                # Start training
 
-                            for i in range(args.n_epochs * round_modifier):
-                                if i % round_modifier == 0:
-                                    bar = IncrementalBar('Epoch ' + str(int(i / round_modifier + 1)), max=round_modifier)
-                                bar.next()
-                                server.train_model(clients)
+                                for i in range(args.n_epochs * round_modifier):
+                                    if i % round_modifier == 0:
+                                        bar = IncrementalBar('Epoch ' + str(int(i / round_modifier + 1)), max=round_modifier)
+                                    bar.next()
+                                    server.train_model(clients)
 
-                                # Evaluation
-                                if ((i + 1) % (args.eval_every * round_modifier)) == 0:
-                                    exp_setting_4 = exp_setting_3 + "_I" + str((i + 1) / round_modifier)
-                                    results = server.predict(clients, max_k=100)
-                                    with open('results/{}/recs/{}.tsv'.format(dataset, exp_setting_4), 'w') as out:
-                                        for u in range(len(results)):
-                                            for e, t in results[u].items():
-                                                out.write(str(u) + '\t' + str(reverse_dict[e]) + '\t' + str(t) + '\n')
+                                    # Evaluation
+                                    if ((i + 1) % (args.eval_every * round_modifier)) == 0:
+                                        exp_setting_4 = exp_setting_3 + "_I" + str((i + 1) / round_modifier)
+                                        results = server.predict(clients, max_k=100)
+                                        with open('results/{}/recs/{}.tsv'.format(dataset, exp_setting_4), 'w') as out:
+                                            for u in range(len(results)):
+                                                for e, t in results[u].items():
+                                                    out.write(str(u) + '\t' + str(reverse_dict[e]) + '\t' + str(t) + '\n')
 
 
 if __name__ == '__main__':
@@ -93,6 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('-pi', '--main_probability', nargs='+', type=float, help='Set the fraction of positive item to send (default 0)')
     parser.add_argument('-q', '--q', nargs='+', help='Set the fraction of positive item to send (default 0)', type=float)
     parser.add_argument('-p', '--p', nargs='+', help='Set the fraction of positive item to send (default 0)', type=float)
+    parser.add_argument('-imax', '--imax', nargs='+', help='Set the fraction of positive item to send (default 0)', type=int)
     parser.add_argument('-U', '--fraction', help='Set the fraction of clients per round (0 for just one client)', type=float, default=0, required=True)
     parser.add_argument('-T', '--sampler_size', help='Set the sampler size: single for 1, uniform for R/U')
     parser.add_argument('-lr', '--lr', nargs='+', help='Set the learning rates', type=float, required=True)

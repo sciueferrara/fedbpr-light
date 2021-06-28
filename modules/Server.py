@@ -20,8 +20,8 @@ class Server:
             idx = random.sample(range(len(clients)), int(fraction*len(clients)))
         return idx
 
-    def train_on_client(self, clients, i):
-        clients[i].train(self.lr, self.model)
+    def train_on_client(self, clients, i, c_len):
+        clients[i].train(self.lr, self.model, c_len)
         # for k, v in resulting_dic.items():
         #     self.model.item_vecs[k] += self.lr * v
         # for k, v in resulting_bias.items():
@@ -32,27 +32,8 @@ class Server:
         c_list = self.select_clients(clients, self.fraction)
         #for i in c_list:
         #    self._send_strategy.send_item_vectors(clients, i, self.model)
-        if not self.mp:
-            if len(c_list) > 1:
-                self.bak_model = copy.deepcopy(self.model)
-                for i in c_list:
-                    clients[i].train_parallel(self.lr, self.positive_fraction, self.bak_model, self.model)
-                self.bak_model = None
-            else:
-                for i in c_list:
-                    self.train_on_client(clients, i)
-        else:
-            #TODO: Multiprocessing is not working properly
-            tasks = multiprocessing.JoinableQueue()
-            num_workers = multiprocessing.cpu_count() - 1
-            workers = [Worker(tasks, self.train_on_client, clients) for _ in range(num_workers)]
-            for w in workers:
-                w.start()
-            for i in c_list:
-                tasks.put((clients, i))
-            for i in range(num_workers):
-                tasks.put(None)
-            tasks.join()
+        for i in c_list:
+            self.train_on_client(clients, i, len(c_list))
         self._send_strategy.update_deltas(self.model, item_vecs_bak, item_bias_bak)
 
     def predict(self, clients, max_k):

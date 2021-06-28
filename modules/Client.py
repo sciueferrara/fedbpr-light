@@ -12,10 +12,11 @@ class Client:
         self.pi = privacy_params[0]
         self.q = privacy_params[1]
         self.p = privacy_params[2]
+        self.h = privacy_params[3]
 
         # The first perturbation is here!
         self.c = - np.ones(self.item_size)
-        self.c[list(self.train_user_list)] = 1
+        self.c[np.random.choice(list(self.train_user_list), min(self.h, len(self.train_user_list)), replace=False)] = 1
         self.pert = np.random.random(self.item_size)
         self.c = np.ma.masked_where(self.pert < self.pi, self.c).filled(-1)
         self.c = np.ma.masked_where(self.pert < 0.5 * self.pi, self.c).filled(1)
@@ -31,7 +32,7 @@ class Client:
 
         return prediction
 
-    def train(self, lr, server_model):
+    def train(self, lr, server_model, c_len):
         bias_reg = 0
         user_reg = lr / 20
         positive_item_reg = lr / 20
@@ -61,6 +62,9 @@ class Client:
                 d_loss * (server_model.item_vecs[positive_sampled] - server_model.item_vecs[negative_sampled]) - user_reg * wu,
         axis=0)
 
+       # unbiasing_n = (self.p + 0.5 * self.pi * self.q - 0.5 * self.pi * self.p) *
+
+        # update = (d_loss * wu - positive_item_reg * server_model.item_vecs[positive_sampled])
         server_model.item_vecs[positive_sampled] = np.add(server_model.item_vecs[positive_sampled],
                                            lr * (d_loss * wu - positive_item_reg * server_model.item_vecs[
                                                positive_sampled]))
